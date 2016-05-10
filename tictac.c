@@ -65,17 +65,30 @@ const Move g_macro_table[9] =
 };
 
 /* global time variables */
-static int g_starting_time = 0;
-static int g_time_bank = 0;
-static int g_time_per_turn = 0;
+int g_starting_time = 0;
+int g_time_bank = 0;
+int g_time_per_turn = 0;
 /* all in milliseconds */
 
 /* string name for current bot */
-static char *g_this_bot_name = NULL;
+char *g_this_bot_name = NULL;
 /* integer representation of bot */
-static int g_this_bot_id = 0;
+int g_this_bot_id = 0;
 
-static Board g_current_board;
+Board g_current_board;
+
+int get_input();
+
+int main(int argc, char const *argv[])
+{
+	int error = 0;
+	while(!error)
+	{
+		error = get_input();
+	}
+	return error;
+	exit(0);
+}
 
 void translate_board(const char *string, Board *board)
 {
@@ -297,14 +310,4 @@ int get_input()
 		else return 1;
 	}
 	else return 1;
-}
-
-int main()
-{
-	int error = 0;
-	while(!error)
-	{
-		error = get_input();
-	}
-	return error;
 }
