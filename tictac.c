@@ -7,13 +7,15 @@
 #include <stdint.h>
 #include <limits.h>
 
-/* #define DEBUG */
+#define DEBUG
 
 #define BOARD_SPACES 81
 #define BOARD_MACROS 9
 #define BOARD_PITCH 9
 
 #define WINNING_BOARDS 8
+
+#define PLY 4
 
 #define STR_SETTINGS "settings"
 #define STR_UPDATE "update"
@@ -124,6 +126,23 @@ char g_opps_bot_id = 0;
 int g_input_count = 0;
 
 Board g_current_board;
+
+void debug_print_node(Node *node)
+{
+	if (node == NULL) return;
+	Item *curr = node->children;
+	fprintf(stderr, "Node, score=%d, depth=%d\n", node->score, node->depth);
+	while (curr != NULL)
+	{
+		debug_print_node(curr->node);
+		curr = curr->next;
+	}
+}
+
+void debug_print_tree(Tree *tree)
+{
+	if (tree != NULL) debug_print_node(tree->root);
+}
 
 Movelist *get_movelist()
 {
@@ -338,7 +357,7 @@ Movelist *legal_moves(Board *state)
 	}
 
 #ifdef DEBUG
-	if (result == NULL) fprintf(stderr, "Bot believes there are no legal moves\n");
+//	if (result == NULL) fprintf(stderr, "Bot believes there are no legal moves\n");
 #endif
 
 	return result;
@@ -369,10 +388,12 @@ void fill_children(Node *node)
 		Node *curr_node = curr_board->node;
 		curr_node->parent = node;
 		curr_node->children = NULL;
+		curr_node->depth = node->depth + 1;
 		curr_node->position = get_board();
 		curr_node->to_move = abs(node->to_move - 3);
 		*(curr_node->position) = *(node->position);
 		move_and_update(curr_node->position, &curr->move, node->to_move);
+		curr_node->score = score_board(curr_node->position);
 
 		curr = curr->next;
 	}
@@ -389,6 +410,40 @@ Tree *construct_tree(Board *current_state, char to_move)
 	tree->root->to_move = to_move;
 	tree->root->parent = NULL;
 	tree->root->children = NULL;
+	tree->root->depth = 0;
+
+	Node *curr = tree->root;
+	Item *stack = NULL;
+	while (curr != NULL)
+	{
+		if (curr->depth < PLY)
+		{
+			fill_children(curr);
+			Item *curr_node = curr->children;
+			while(curr_node != NULL)
+			{
+				Item *temp = stack;
+				stack = get_item();
+				stack->node = curr_node->node;
+				stack->next = temp;
+				curr_node = curr_node->next;
+			}
+		}
+
+		if (stack == NULL)
+		{
+			curr = NULL;
+		}
+		else
+		{
+			Item *temp = stack;
+			curr = stack->node;
+			stack = stack->next;
+			free(temp);
+		}
+	}
+
+	return tree;
 }
 
 void translate_board(const char *string, Board *board)
@@ -625,10 +680,21 @@ int get_input()
 
 int main(int argc, char const *argv[])
 {
+
+#ifndef DEBUG
 	int error = 0;
 	while(!error)
 	{
 		error = get_input();
 	}
 	return error;
+#endif
+
+#ifdef DEBUG
+	memset(g_current_board.boards, -1, BOARD_MACROS);
+	memset(g_current_board.spaces, 0, BOARD_SPACES);
+	Tree *test = construct_tree(&g_current_board, 1);
+	debug_print_tree(test);
+	return 0;
+#endif
 }
