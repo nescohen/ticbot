@@ -43,6 +43,7 @@ struct node
 	Item *children;
 	Node *parent;
 	int depth; /* maybe */
+	long score;
 	Board *position;
 };
 
@@ -135,6 +136,24 @@ Board *get_board()
 	return result;
 }
 
+Tree *get_tree()
+{
+	Tree *tree = malloc(sizeof(Tree));
+	return tree;
+}
+
+Node *get_node()
+{
+	Node *node = malloc(sizeof(Node));
+	return node;
+}
+
+Item *get_item()
+{
+	Item *item = malloc(sizeof(Item));
+	return item;
+}
+
 long score_board(Board *board)
 {
 	/* determine if a board is in an endgame position */
@@ -176,6 +195,11 @@ long score_board(Board *board)
 		return LONG_MIN;
 	}
 	else return 0;
+}
+
+void move_and_update(Board *board, Move *move, char id)
+{
+
 }
 
 Movelist *legal_moves(Board *state)
@@ -220,12 +244,50 @@ Movelist *legal_moves(Board *state)
 #ifdef DEBUG
 	if (result == NULL) fprintf(stderr, "Bot believes there are no legal moves\n");
 #endif
+
 	return result;
+}
+
+void fill_children(Node *node)
+{
+	Movelist *list = legal_moves(node->position);
+	Item *board_list = NULL;
+	Item *curr_board = NULL;
+	Movelist *curr = list;
+
+	while (curr != NULL)
+	{
+		if (curr_board == NULL)
+		{
+			board_list = get_item();
+			curr_board = board_list;
+		}
+		else
+		{
+			curr_board->next = get_item();
+			curr_board = curr_board->next;
+		}
+
+		curr_board->node = get_node();
+		curr_board->next = NULL;
+		Node *curr_node = curr_board->node;
+		curr_node->parent = node;
+		curr_node->children = NULL;
+		curr_node->position = get_board();
+		*(curr_node->position) = *(node->position);
+
+		curr = curr->next;
+	}
 }
 
 Tree *construct_tree(Board *current_state)
 {
+	Tree *tree = get_tree();
 
+	tree->root = get_node();
+	tree->root->position = current_state;
+	tree->root->parent = NULL;
+	tree->root->children = NULL;
 }
 
 void translate_board(const char *string, Board *board)
