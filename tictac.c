@@ -165,6 +165,16 @@ void debug_print_tree(Tree *tree)
 	if (tree != NULL) debug_print_node(tree->root);
 }
 
+void debug_print_list(Movelist *list)
+{
+	Movelist *curr = list;
+	while (curr != NULL)
+	{
+		fprintf(stderr, "Move (%d, %d)\n", curr->move.x, curr->move.y);
+		curr = curr->next;
+	}
+}
+
 Movelist *get_movelist()
 {
 	Movelist *result = malloc(sizeof(Movelist));
@@ -302,7 +312,7 @@ void move_and_update(Board *board, Move *move, char id)
 	int macroboard = macro_x + macro_y*3;
 	Move micromove;
 	micromove.x = move->x - g_macro_table[macroboard].x;
-	micromove.y = move->y = g_macro_table[macroboard].y;
+	micromove.y = move->y - g_macro_table[macroboard].y;
 	int next_macro = micromove.x + micromove.y*3;
 
 	board->spaces[move->x + move->y*BOARD_PITCH] = id;
@@ -323,7 +333,7 @@ void move_and_update(Board *board, Move *move, char id)
 				board->boards[i] = 0;
 			}
 		}
-		board->boards[next_macro] == -1;
+		board->boards[next_macro] = -1;
 	}
 	else
 	{
