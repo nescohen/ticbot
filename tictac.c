@@ -235,7 +235,9 @@ Move make_move(int time, Board *curr_board)
 	if (macroboard == -1)
 	{
 		/* no legal moves? */
+#ifdef DEBUG
 		fprintf(stderr, "bot thinks there are currently no legal moves,\n");
+#endif
 		result.x = 0;
 		result.y = 0;
 		return result;
@@ -272,7 +274,9 @@ int get_input()
 
 	fgets(buffer, 500, stdin);
 
+#ifdef DEBUG
 	fprintf(stderr, "%s\n", buffer);
+#endif
 
 	sscanf(buffer, "%50s%50s%50s%200s", op_1, op_2, op_3, op_4);
 
@@ -293,7 +297,9 @@ int get_input()
 		if (strcmp(op_2, STR_MOVE) == 0)
 		{
 			Move made = make_move(strtol(op_3, NULL, 10), &g_current_board);
+#ifdef DEBUG
 			fprintf(stderr, "about to print move. Input count=%d\n", g_input_count);
+#endif
 			fprintf(stdout, "%s %d %d\n", STR_PLACE_MOVE, made.x, made.y);
 			fflush(stdout);
 			return 0;
