@@ -127,11 +127,32 @@ int g_input_count = 0;
 
 Board g_current_board;
 
+void debug_print_board(Board *board)
+{
+	fprintf(stderr, "Move: %d, Round: %d\n", board->moves, board->rounds);
+	fprintf(stderr, "Macros: [ ");
+	int i;
+	for (i = 0; i < BOARD_MACROS; i++)
+	{
+		fprintf(stderr, "%d ", board->boards[i]);
+	}
+	fprintf(stderr, "]\nBoard:\n");
+	for (i = 0; i < BOARD_SPACES; i++)
+	{
+		fprintf(stderr, "%d ", board->spaces[i]);
+		if (i % 9 == 8)
+		{
+			fprintf(stderr, "\n");
+		}
+	}
+}
+
 void debug_print_node(Node *node)
 {
 	if (node == NULL) return;
 	Item *curr = node->children;
 	fprintf(stderr, "Node, score=%d, depth=%d\n", node->score, node->depth);
+	debug_print_board(node->position);
 	while (curr != NULL)
 	{
 		debug_print_node(curr->node);
@@ -242,11 +263,11 @@ int evaluate_board(const char *board, int rows, int columns, int pitch)
 
 	for (i = 0; i < WINNING_BOARDS; i++)
 	{
-		if (bot_1 & g_winning_boards[i] == g_winning_boards[i])
+		if ((bot_1 & g_winning_boards[i]) == g_winning_boards[i])
 		{
 			bot_1_won = 1;
 		}
-		if (bot_2 & g_winning_boards[i] == g_winning_boards[i])
+		if ((bot_2 & g_winning_boards[i]) == g_winning_boards[i])
 		{
 			bot_2_won = 1;
 		}
@@ -392,6 +413,7 @@ void fill_children(Node *node)
 		curr_node->position = get_board();
 		curr_node->to_move = abs(node->to_move - 3);
 		*(curr_node->position) = *(node->position);
+		memcpy(curr_node->position, node->position, sizeof(Board));
 		move_and_update(curr_node->position, &curr->move, node->to_move);
 		curr_node->score = score_board(curr_node->position);
 
