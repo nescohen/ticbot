@@ -75,20 +75,9 @@ char *g_this_bot_name = NULL;
 /* integer representation of bot */
 int g_this_bot_id = 0;
 
+int g_input_count = 0;
+
 Board g_current_board;
-
-int get_input();
-
-int main(int argc, char const *argv[])
-{
-	int error = 0;
-	while(!error)
-	{
-		error = get_input();
-	}
-	return error;
-	exit(0);
-}
 
 void translate_board(const char *string, Board *board)
 {
@@ -279,13 +268,13 @@ int get_input()
 	char op_3[50];
 	char op_4[200];
 
-	fgets(buffer, 500, stdin);
-	sscanf(buffer, "%50s%50s%50s%200s", op_1, op_2, op_3, op_4);
+	g_input_count += 1;
 
-#ifdef DEBUG
-	printf("1 - %s\n2 - %s\n3 - %s\n4 - %s\n", op_1, op_2, op_3, op_4);
-	return 0;
-#endif
+	fgets(buffer, 500, stdin);
+
+	fprintf(stderr, "%s\n", buffer);
+
+	sscanf(buffer, "%50s%50s%50s%200s", op_1, op_2, op_3, op_4);
 
 	if (strcmp(op_1, STR_SETTINGS) == 0)
 	{
@@ -304,10 +293,22 @@ int get_input()
 		if (strcmp(op_2, STR_MOVE) == 0)
 		{
 			Move made = make_move(strtol(op_3, NULL, 10), &g_current_board);
-			printf("%s %d %d\n", STR_PLACE_MOVE, made.x, made.y);
+			fprintf(stderr, "about to print move. Input count=%d\n", g_input_count);
+			fprintf(stdout, "%s %d %d\n", STR_PLACE_MOVE, made.x, made.y);
+			fflush(stdout);
 			return 0;
 		}
 		else return 1;
 	}
 	else return 1;
+}
+
+int main(int argc, char const *argv[])
+{
+	int error = 0;
+	while(!error)
+	{
+		error = get_input();
+	}
+	return error;
 }
