@@ -210,7 +210,7 @@ long score_board(Board *board)
 	/* determine if a board is in an endgame position */
 	uint16_t this_bot = 0;
 	uint16_t opposing_bot = 0;
-	char won;
+	char won = 0;
 	int i;
 
 	for (i = 0; i < BOARD_MACROS; i++)
@@ -227,11 +227,11 @@ long score_board(Board *board)
 
 	for (i = 0; i < WINNING_BOARDS; i++)
 	{
-		if (g_winning_boards[i] & this_bot == g_winning_boards[i])
+		if ((g_winning_boards[i] & this_bot) == g_winning_boards[i])
 		{
 			won = g_this_bot_id;
 		}
-		else if (g_winning_boards[i] & opposing_bot == g_winning_boards[i])
+		else if ((g_winning_boards[i] & opposing_bot) == g_winning_boards[i])
 		{
 			won = g_opps_bot_id;
 		}
@@ -723,6 +723,8 @@ int main(int argc, char const *argv[])
 #endif
 
 #ifdef DEBUG
+	g_this_bot_id = 1;
+	g_opps_bot_id = 2;
 	memset(g_current_board.boards, -1, BOARD_MACROS);
 	memset(g_current_board.spaces, 0, BOARD_SPACES);
 	Tree *test = construct_tree(&g_current_board, 1);
