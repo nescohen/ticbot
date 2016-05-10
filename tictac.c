@@ -1,19 +1,19 @@
 /* Nes Cohen 5/9/16
-   Ultimate Tic Tac Toe Bot v0 */
-
-/* PLEASE NOTE: this bot is currently in version 0 which is merely
- * a technical test run. It should be fully functional, but will
- * make arbitrary legal moves. */
+   Ultimate Tic Tac Toe Bot v1 */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
+#include <limits.h>
 
 /* #define DEBUG */
 
 #define BOARD_SPACES 81
 #define BOARD_MACROS 9
 #define BOARD_PITCH 9
+
+#define WINNING_BOARDS 8
 
 #define STR_SETTINGS "settings"
 #define STR_UPDATE "update"
@@ -34,6 +34,31 @@
 
 #define STR_PLACE_MOVE "place_move"
 
+typedef struct item Item;
+typedef struct board Board;
+
+typedef struct node Node;
+struct node
+{
+	Item *children;
+	Node *parent;
+	int depth; /* maybe */
+	Board *position;
+};
+
+struct item
+{
+	Node *node;
+	Item *next;
+};
+
+typedef struct tree Tree;
+struct tree
+{
+	int nodes;
+	Node *root;
+};
+
 typedef struct move Move;
 struct move
 /* each may only be 0-8 inclusive */
@@ -42,7 +67,13 @@ struct move
 	char y;
 };
 
-typedef struct board Board;
+typedef struct movelist Movelist;
+struct movelist
+{
+	Move move;
+	Movelist *next;
+};
+
 struct board
 {
 	int moves;
@@ -64,20 +95,138 @@ const Move g_macro_table[9] =
 	{.x = 6, .y = 6},
 };
 
+const uint16_t g_winning_boards[8] =
+{
+	0x007, /* 0b 0 0000 0111 - vertical top row */
+	0x038, /* 0b 0 0011 1000 - vertical middle row */
+	0x1C0, /* 0b 1 1100 0000 - vertical bottom row */
+	0x049, /* 0b 0 0100 1001 - horizontal left row */
+	0x092, /* 0b 0 1001 0010 - horizontal middle row */
+	0x124, /* 0b 1 0010 0100 - horizontal right row */
+	0x111, /* 0b 1 0001 0001 - diagonal top right to bottom left */
+	0x054, /* 0b 0 0101 0100 - diagonal top left to bottom right */
+};
+
 /* global time variables */
 int g_starting_time = 0;
-int g_time_bank = 0;
 int g_time_per_turn = 0;
+int g_time_bank = 0;
 /* all in milliseconds */
 
 /* string name for current bot */
 char *g_this_bot_name = NULL;
 /* integer representation of bot */
-int g_this_bot_id = 0;
+char g_this_bot_id = 0;
+char g_opps_bot_id = 0;
 
 int g_input_count = 0;
 
 Board g_current_board;
+
+Movelist *get_movelist()
+{
+	Movelist *result = malloc(sizeof(Movelist));
+	return result;
+}
+
+Board *get_board()
+{
+	Board *result = malloc(sizeof(Board));
+	return result;
+}
+
+long score_board(Board *board)
+{
+	/* determine if a board is in an endgame position */
+	uint16_t this_bot = 0;
+	uint16_t opposing_bot = 0;
+	char won;
+	int i;
+
+	for (i = 0; i < BOARD_MACROS; i++)
+	{
+		if (board->boards[i] == g_this_bot_id)
+		{
+			this_bot |= 1 << i;
+		}
+		else if (board->boards[i] == g_opps_bot_id)
+		{
+			opposing_bot |= 1 << i;
+		}
+	}
+
+	for (i = 0; i < WINNING_BOARDS; i++)
+	{
+		if (g_winning_boards[i] & this_bot == g_winning_boards[i])
+		{
+			won = g_this_bot_id;
+		}
+		else if (g_winning_boards[i] & opposing_bot == g_winning_boards[i])
+		{
+			won = g_opps_bot_id;
+		}
+	}
+
+	if (won == g_this_bot_id)
+	{
+		return LONG_MAX;
+	}
+	else if (won == g_opps_bot_id)
+	{
+		return LONG_MIN;
+	}
+	else return 0;
+}
+
+Movelist *legal_moves(Board *state)
+{
+	Movelist *result;
+	Movelist *curr;
+	int i, j, k;
+
+	result = NULL;
+	curr = NULL;
+	for (i = 0; i < BOARD_MACROS; i++)
+	{
+		if (state->boards[i] == -1)
+		{
+			Move translate = g_macro_table[i];
+			for (j = 0; j < 3; j++)
+			{
+				for (k = 0; k < 3; k++)
+				{
+					int space = translate.x + j + (translate.y + k)*BOARD_PITCH;
+					if (state->spaces[space] == 0)
+					{
+						Move add = {.x = translate.x + j, .y = translate.y + k};
+						if (curr == NULL)
+						{
+							result = get_movelist();
+							curr = result;
+						}
+						else
+						{
+							curr->next = get_movelist();
+							curr = curr->next;
+						}
+						curr->move = add;
+						curr->next = NULL;
+					}
+				}
+			}
+		}
+	}
+
+#ifdef DEBUG
+	if (result == NULL) fprintf(stderr, "Bot believes there are no legal moves\n");
+#endif
+	return result;
+}
+
+Tree *construct_tree(Board *current_state)
+{
+
+}
 
 void translate_board(const char *string, Board *board)
 {
@@ -158,6 +307,7 @@ int settings(const char *setting, const char *value)
 			if (strcmp(setting, STR_THIS_BOT_ID) == 0)
 			{
 				g_this_bot_id = strtol(value, NULL, 10);
+				g_opps_bot_id = abs(g_this_bot_id - 3); /* 2 if this_bot is 1, and vice versa */
 				return 0;
 			}
 			else return 1;
@@ -296,6 +446,7 @@ int get_input()
 	{
 		if (strcmp(op_2, STR_MOVE) == 0)
 		{
+			g_time_bank = strtol(op_3, NULL, 10);
 			Move made = make_move(strtol(op_3, NULL, 10), &g_current_board);
 #ifdef DEBUG
 			fprintf(stderr, "about to print move. Input count=%d\n", g_input_count);
