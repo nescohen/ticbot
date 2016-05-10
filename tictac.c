@@ -44,6 +44,7 @@ struct node
 	Node *parent;
 	int depth; /* maybe */
 	long score;
+	char to_move;
 	Board *position;
 };
 
@@ -197,9 +198,104 @@ long score_board(Board *board)
 	else return 0;
 }
 
-void move_and_update(Board *board, Move *move, char id)
+int evaluate_board(const char *board, int rows, int columns, int pitch)
 {
+	uint16_t bot_1 = 0;
+	uint16_t bot_2 = 0;
+	int bot_1_won = 0;
+	int bot_2_won = 0;
+	int i, j;
 
+	for (i = 0; i < columns; i++)
+	{
+		for (j = 0; j < rows; j++)
+		{
+			if (*(board + i + j*pitch) == 1)
+			{
+				bot_1 |= 1 << (i + j*3);
+			}
+			else if (*(board + i + j*pitch) == 2)
+			{
+				bot_2 |= 1 << (i + j*3);
+			}
+		}
+	}
+
+	for (i = 0; i < WINNING_BOARDS; i++)
+	{
+		if (bot_1 & g_winning_boards[i] == g_winning_boards[i])
+		{
+			bot_1_won = 1;
+		}
+		if (bot_2 & g_winning_boards[i] == g_winning_boards[i])
+		{
+			bot_2_won = 1;
+		}
+	}
+
+#ifdef DEBUG
+	if (bot_1_won && bot_2_won)
+	{
+		fprintf(stderr, "Bot reports both players won on same board\n");
+	}
+#endif
+
+	if (bot_1_won)
+	{
+		return 1;
+	}
+	else if (bot_2_won)
+	{
+		return 2;
+	}
+	else
+	{
+		return 0;
+	}
+}
+
+void move_and_update(Board *board, Move *move, char id)
+/* warning: does not verify if the move is legal */
+{
+	int macro_x = move->x / 3;
+	int macro_y = move->y / 3;
+	int macroboard = macro_x + macro_y*3;
+	Move micromove;
+	micromove.x = move->x - g_macro_table[macroboard].x;
+	micromove.y = move->y = g_macro_table[macroboard].y;
+	int next_macro = micromove.x + micromove.y*3;
+
+	board->spaces[move->x + move->y*BOARD_PITCH] = id;
+	int microboard = g_macro_table[macroboard].x + g_macro_table[macroboard].y*BOARD_PITCH;
+	int result = evaluate_board(board->spaces + microboard, 3, 3, BOARD_PITCH);
+	if (result != 0)
+	{
+		board->boards[macroboard] = result;
+	}
+
+	if (board->boards[next_macro] <= 0)
+	{
+		int i;
+		for (i = 0; i < BOARD_MACROS; i++)
+		{
+			if (board->boards[i] == -1)
+			{
+				board->boards[i] = 0;
+			}
+		}
+		board->boards[next_macro] == -1;
+	}
+	else
+	{
+		int i;
+		for (i = 0; i < BOARD_MACROS; i++)
+		{
+			if (board->boards[i] == 0)
+			{
+				board->boards[i] = -1;
+			}
+		}
+	}
 }
 
 Movelist *legal_moves(Board *state)
@@ -274,18 +370,23 @@ void fill_children(Node *node)
 		curr_node->parent = node;
 		curr_node->children = NULL;
 		curr_node->position = get_board();
+		curr_node->to_move = abs(node->to_move - 3);
 		*(curr_node->position) = *(node->position);
+		move_and_update(curr_node->position, &curr->move, node->to_move);
 
 		curr = curr->next;
 	}
+
+	node->children = board_list;
 }
 
-Tree *construct_tree(Board *current_state)
+Tree *construct_tree(Board *current_state, char to_move)
 {
 	Tree *tree = get_tree();
 
 	tree->root = get_node();
 	tree->root->position = current_state;
+	tree->root->to_move = to_move;
 	tree->root->parent = NULL;
 	tree->root->children = NULL;
 }
