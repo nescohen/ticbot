@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <limits.h>
+#include <time.h>
 
 // #define DEBUG
 
@@ -115,6 +116,7 @@ int g_starting_time = 0;
 int g_time_per_turn = 0;
 int g_time_bank = 0;
 /* all in milliseconds */
+clock_t g_move_start_time;
 
 /* string name for current bot */
 char *g_this_bot_name = NULL;
@@ -645,7 +647,7 @@ void fill_children(Node *node)
 	node->children = board_list;
 }
 
-Tree *construct_tree(Board *current_state, char to_move, int ply)
+Tree *construct_tree(Board *current_state, char to_move, int ply, int millis)
 {
 	Tree *tree = get_tree();
 
@@ -658,7 +660,7 @@ Tree *construct_tree(Board *current_state, char to_move, int ply)
 
 	Node *curr = tree->root;
 	Item *stack = NULL;
-	while (curr != NULL)
+	while (curr != NULL && (clock() - g_starting_time) / (CLOCKS_PER_SEC / 1000) < millis)
 	{
 		if (curr->depth < ply)
 		{
@@ -850,6 +852,41 @@ Move reverse_move(Board *original, Board *changed)
 	return result;
 }
 
+int recommend_depth(Board *board)
+{
+	int i;
+	int open = 0;
+	int closed = 0;
+	for (i = 0; i < BOARD_MACROS; i++)
+	{
+		if (board->boards[i] == -1)
+		{
+			open += 1;
+		}
+		else if (board->boards[i] != 0)
+		{
+			closed += 1;
+		}
+	}
+
+	int result;
+	if (open == 1)
+	{
+		result = 4;
+		result += closed;
+		if (result > 7) result = 7;
+	}
+	else if (closed > 2)
+	{
+		result = 4 + closed - open;
+	}
+	else
+	{
+		result = 5;
+	}
+	return result;
+}
+
 Move make_move(int milliseconds, Board *curr_board)
 {
 	fprintf(stderr, "Time Bank: %d milliseconds\n", milliseconds);
@@ -862,12 +899,13 @@ Move make_move(int milliseconds, Board *curr_board)
 	}
 
 	int ply;
-	if (milliseconds >= 9500) ply = 6;
-	else ply = 4;
+	if (milliseconds >= 5000) ply = recommend_depth(curr_board);
+	else if (milliseconds <= 1000) ply = 4;
+	else ply = 5;
 
 	Board *root = get_board();
 	memcpy(root, curr_board, sizeof(Board));
-	Tree *tree = construct_tree(root, g_this_bot_id, ply);
+	Tree *tree = construct_tree(root, g_this_bot_id, ply, milliseconds - 50);
 	minimax(tree);
 
 	Move result;
@@ -887,6 +925,8 @@ Move make_move(int milliseconds, Board *curr_board)
 
 	free_tree(tree);
 
+	int time_elapsed = (clock() - g_starting_time) / (CLOCKS_PER_SEC / 1000);
+	fprintf(stderr, "Time Elapsed: %d\n", time_elapsed);
 	return result;
 }
 
@@ -926,6 +966,7 @@ int get_input()
 		if (strcmp(op_2, STR_MOVE) == 0)
 		{
 			g_time_bank = strtol(op_3, NULL, 10);
+			g_starting_time = clock();
 			Move made = make_move(strtol(op_3, NULL, 10), &g_current_board);
 #ifdef DEBUG
 			fprintf(stderr, "about to print move. Input count=%d\n", g_input_count);
