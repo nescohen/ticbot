@@ -746,8 +746,10 @@ Move reverse_move(Board *original, Board *changed)
 	return result;
 }
 
-Move make_move(int time, Board *curr_board)
+Move make_move(int milliseconds, Board *curr_board)
 {
+	fprintf(stderr, "Time Bank: %d milliseconds\n", milliseconds);
+
 	if (g_this_bot_id == 0)
 	{
 		Move result = {.x = 0, .y = 0};
