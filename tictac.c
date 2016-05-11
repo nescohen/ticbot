@@ -284,13 +284,18 @@ long score_board(Board *board)
 	long score = 0;
 	for (i = 0; i < BOARD_MACROS; i++)
 	{
+		int offset = g_macro_table[i].x + g_macro_table[i].y*BOARD_PITCH;
 		if (board->boards[i] == g_this_bot_id)
 		{
-			score += 100;
+			score += 1000;
 		}
 		else if (board->boards[i] == g_opps_bot_id)
 		{
-			score -= 100;
+			score -= 1000;
+		}
+		else if (board->spaces[offset] == g_this_bot_id)
+		{
+			score += 100;
 		}
 	}
 	return score;
@@ -753,6 +758,7 @@ Move make_move(int milliseconds, Board *curr_board)
 	if (g_this_bot_id == 0)
 	{
 		Move result = {.x = 0, .y = 0};
+		fprintf(stderr, "Something went very wrong...\n");
 		return result;
 	}
 	Board *root = get_board();
@@ -772,6 +778,8 @@ Move make_move(int milliseconds, Board *curr_board)
 		}
 		curr = curr->next;
 	}
+
+	fprintf(stderr, "Best Move Score: %d\n", best);
 
 	free_tree(tree);
 
