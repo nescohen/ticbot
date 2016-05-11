@@ -902,7 +902,7 @@ int recommend_depth(Board *board)
 	return result;
 }
 
-Move make_move(int milliseconds, Board *curr_board)
+Move make_move(int milliseconds, Board *curr_board, Tree **tree)
 {
 	fprintf(stderr, "Time Bank: %d milliseconds\n", milliseconds);
 
@@ -914,18 +914,19 @@ Move make_move(int milliseconds, Board *curr_board)
 	}
 
 	int ply;
-	if (milliseconds >= 5000) ply = recommend_depth(curr_board);
+	if (milliseconds >= 9000) ply = 6;
+	else if (milliseconds >= 5000) ply = recommend_depth(curr_board);
 	else if (milliseconds <= 1000) ply = 4;
 	else ply = 5;
 
 	Board *root = get_board();
 	memcpy(root, curr_board, sizeof(Board));
-	Tree *tree = construct_tree(root, g_this_bot_id, ply, milliseconds - 100);
+	*tree = construct_tree(root, g_this_bot_id, ply, milliseconds - 100);
 
 #ifdef DEBUG_MINIMAX
 	g_minimax_time = clock();
 #endif
-	minimax(tree);
+	minimax(*tree);
 #ifdef DEBUG_MINIMAX
 	clock_t elapsed = clock() - g_minimax_time;
 	fprintf(stderr, "Minimax cycles elapsed: %d\n", elapsed);
@@ -933,7 +934,7 @@ Move make_move(int milliseconds, Board *curr_board)
 
 	Move result;
 	long best = LONG_MIN;
-	Item *curr = tree->root->children;
+	Item *curr = (*tree)->root->children;
 	while (curr != NULL)
 	{
 		if (curr->node->score >= best)
@@ -945,8 +946,6 @@ Move make_move(int milliseconds, Board *curr_board)
 	}
 
 	fprintf(stderr, "Best Move Score: %ld - (%d, %d)\n", best, result.x, result.y);
-
-	free_tree(tree);
 
 	int time_elapsed = (clock() - g_starting_time) / (CLOCKS_PER_SEC / 1000);
 	fprintf(stderr, "Time Elapsed: %d. Depth Chosen: %d\n", time_elapsed, ply);
@@ -988,14 +987,16 @@ int get_input()
 	{
 		if (strcmp(op_2, STR_MOVE) == 0)
 		{
+			Tree *tree;
 			g_time_bank = strtol(op_3, NULL, 10);
 			g_starting_time = clock();
-			Move made = make_move(strtol(op_3, NULL, 10), &g_current_board);
+			Move made = make_move(strtol(op_3, NULL, 10), &g_current_board, &tree);
 #ifdef DEBUG
 			fprintf(stderr, "about to print move. Input count=%d\n", g_input_count);
 #endif
 			fprintf(stdout, "%s %d %d\n", STR_PLACE_MOVE, made.x, made.y);
 			fflush(stdout);
+			free_tree(tree);
 			return 0;
 		}
 		else return 1;
