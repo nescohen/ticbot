@@ -178,6 +178,7 @@ void debug_print_list(Movelist *list)
 Movelist *get_movelist()
 {
 	Movelist *result = malloc(sizeof(Movelist));
+	if (result == NULL) fprintf(stderr, "Uh-oh, out of memory\n");
 	return result;
 }
 
@@ -194,6 +195,7 @@ void free_movelist(Movelist *list)
 Board *get_board()
 {
 	Board *result = malloc(sizeof(Board));
+	if (result == NULL) fprintf(stderr, "Uh-oh, out of memory\n");
 	return result;
 }
 
@@ -205,12 +207,14 @@ void free_board(Board *board)
 Tree *get_tree()
 {
 	Tree *tree = malloc(sizeof(Tree));
+	if (tree == NULL) fprintf(stderr, "Uh-oh, out of memory\n");
 	return tree;
 }
 
 Node *get_node()
 {
 	Node *node = malloc(sizeof(Node));
+	if (node == NULL) fprintf(stderr, "Uh-oh, out of memory\n");
 	return node;
 }
 
@@ -237,6 +241,7 @@ void free_tree(Tree *tree)
 Item *get_item()
 {
 	Item *item = malloc(sizeof(Item));
+	if (item == NULL) fprintf(stderr, "Uh-oh, out of memory\n");
 	return item;
 }
 
@@ -779,7 +784,7 @@ Move make_move(int milliseconds, Board *curr_board)
 		curr = curr->next;
 	}
 
-	fprintf(stderr, "Best Move Score: %d\n", best);
+	fprintf(stderr, "Best Move Score: %d - (%d, %d)\n", best, result.x, result.y);
 
 	free_tree(tree);
 
