@@ -10,6 +10,8 @@
 
 // #define DEBUG
 
+// #define DEBUG_MINIMAX
+
 #define BOARD_SPACES 81
 #define BOARD_MACROS 9
 #define BOARD_PITCH 9
@@ -127,6 +129,10 @@ char g_opps_bot_id = 0;
 int g_input_count = 0;
 
 Board g_current_board;
+
+#ifdef DEBUG_MINIMAX
+clock_t g_minimax_time;
+#endif
 
 void debug_print_board(Board *board)
 {
@@ -875,12 +881,12 @@ int recommend_depth(Board *board)
 	if (open == 1)
 	{
 		result = 4;
-		result += closed;
+		result += (closed / 2);
 		if (result > 7) result = 7;
 	}
 	else if (closed > 2)
 	{
-		result = 4 + closed - open;
+		result = 4 + closed/2 - open/2;
 	}
 	else
 	{
@@ -907,8 +913,16 @@ Move make_move(int milliseconds, Board *curr_board)
 
 	Board *root = get_board();
 	memcpy(root, curr_board, sizeof(Board));
-	Tree *tree = construct_tree(root, g_this_bot_id, ply, milliseconds - 50);
+	Tree *tree = construct_tree(root, g_this_bot_id, ply, milliseconds - 100);
+
+#ifdef DEBUG_MINIMAX
+	g_minimax_time = clock();
+#endif
 	minimax(tree);
+#ifdef DEBUG_MINIMAX
+	clock_t elapsed = clock() - g_minimax_time;
+	fprintf(stderr, "Minimax cycles elapsed: %d\n", elapsed);
+#endif
 
 	Move result;
 	long best = LONG_MIN;
