@@ -944,7 +944,7 @@ Move make_move(int milliseconds, Board *curr_board)
 		curr = curr->next;
 	}
 
-	fprintf(stderr, "Best Move Score: %d - (%d, %d)\n", best, result.x, result.y);
+	fprintf(stderr, "Best Move Score: %ld - (%d, %d)\n", best, result.x, result.y);
 
 	free_tree(tree);
 
