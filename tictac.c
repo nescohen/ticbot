@@ -326,6 +326,13 @@ long value_microboard(const char *board, int pitch)
 	{
 		score -= 150;
 	}
+
+	/* check the corners */
+	if (*board == g_this_bot_id) score += 10;
+	if (*(board + 2) == g_this_bot_id) score += 10;
+	if (*(board + 2*pitch) == g_this_bot_id) score += 10;
+	if (*(board + 2 + 2*pitch) == g_this_bot_id) score += 10;
+
 	return score;
 }
 
@@ -375,9 +382,9 @@ long score_board(Board *board)
 	{
 		score += 100;
 	}
-	else if (board->spaces[40] == g_opps_bot_id)
+	if (board->boards[4] == g_this_bot_id) /* test for the very middle board */
 	{
-		score -= 100;
+		score += 1000;
 	}
 	for (i = 0; i < BOARD_MACROS; i++)
 	{
