@@ -7,7 +7,7 @@
 #include <stdint.h>
 #include <limits.h>
 
-#define DEBUG
+// #define DEBUG
 
 #define BOARD_SPACES 81
 #define BOARD_MACROS 9
@@ -181,10 +181,25 @@ Movelist *get_movelist()
 	return result;
 }
 
+void free_movelist(Movelist *list)
+{
+	while (list != NULL)
+	{
+		Movelist *temp = list->next;
+		free(list);
+		list = temp;
+	}
+}
+
 Board *get_board()
 {
 	Board *result = malloc(sizeof(Board));
 	return result;
+}
+
+void free_board(Board *board)
+{
+	free(board);
 }
 
 Tree *get_tree()
@@ -197,6 +212,26 @@ Node *get_node()
 {
 	Node *node = malloc(sizeof(Node));
 	return node;
+}
+
+void free_node(Node *node)
+{
+	free_board(node->position);
+	Item *curr = node->children;
+	while (curr != NULL)
+	{
+		Item *temp = curr;
+		free_node(curr->node);
+		curr = curr->next;
+		free(temp);
+	}
+	free(node);
+}
+
+void free_tree(Tree *tree)
+{
+	free_node(tree->root);
+	free(tree);
 }
 
 Item *get_item()
@@ -245,7 +280,20 @@ long score_board(Board *board)
 	{
 		return LONG_MIN;
 	}
-	else return 0;
+
+	long score = 0;
+	for (i = 0; i < BOARD_MACROS; i++)
+	{
+		if (board->boards[i] == g_this_bot_id)
+		{
+			score += 100;
+		}
+		else if (board->boards[i] == g_opps_bot_id)
+		{
+			score -= 100;
+		}
+	}
+	return score;
 }
 
 int evaluate_board(const char *board, int rows, int columns, int pitch)
@@ -298,9 +346,63 @@ int evaluate_board(const char *board, int rows, int columns, int pitch)
 	{
 		return 2;
 	}
+	else if ((bot_1 & bot_2) == 0x1FF)
+	{
+		return -1; /* tied board */
+	}
 	else
 	{
 		return 0;
+	}
+}
+
+long minimax_node(Node *node, int max_player)
+{
+	if (node->children == NULL)
+	{
+		return node->score;
+	}
+
+	if (max_player)
+	{
+		long best = LONG_MIN;
+		Item *curr = node->children;
+		while (curr != NULL)
+		{
+			long score = minimax_node(curr->node, 0);
+			if (score > best)
+			{
+				best = score;
+			}
+			curr = curr->next;
+		}
+		return best;
+	}
+	else
+	{
+		long best = LONG_MAX;
+		Item *curr = node->children;
+		while (curr != NULL)
+		{
+			long score = minimax_node(curr->node, 1);
+			if (score < best)
+			{
+				best = score;
+			}
+			curr = curr->next;
+		}
+		return best;
+	}
+}
+
+Move minimax(Tree *tree)
+{
+	Item *curr = tree->root->children;
+
+	while(curr != NULL)
+	{
+		curr->node->score = minimax_node(curr->node, 0);
+		curr = curr->next;
 	}
 }
 
@@ -318,9 +420,14 @@ void move_and_update(Board *board, Move *move, char id)
 	board->spaces[move->x + move->y*BOARD_PITCH] = id;
 	int microboard = g_macro_table[macroboard].x + g_macro_table[macroboard].y*BOARD_PITCH;
 	int result = evaluate_board(board->spaces + microboard, 3, 3, BOARD_PITCH);
-	if (result != 0)
+	if (result > 0)
 	{
 		board->boards[macroboard] = result;
+	}
+	else if (result == -1)
+	{
+		/* tied board */
+		board->boards[macroboard] = 3;
 	}
 
 	if (board->boards[next_macro] <= 0)
@@ -429,6 +536,8 @@ void fill_children(Node *node)
 
 		curr = curr->next;
 	}
+
+	free_movelist(list);
 
 	node->children = board_list;
 }
@@ -618,46 +727,52 @@ int update_game(const char *aspect, const char *value)
 	}
 }
 
-Move make_move(int time, Board *curr_board)
-/* NOTE - temporary, make arbitrary legal move */
+Move reverse_move(Board *original, Board *changed)
 {
-	Move result;
 	int i;
-	int macroboard = -1;
-	for (i = 0; i < BOARD_MACROS; i++)
+	for (i = 0; i < BOARD_SPACES; i++)
 	{
-		if (curr_board->boards[i] == -1)
+		if (original->spaces[i] != changed->spaces[i])
 		{
-			macroboard = i;
+			Move result;
+			result.x = i % BOARD_PITCH;
+			result.y = i / BOARD_PITCH;
+			return result;
 		}
 	}
+	Move result;
+	result.x = -1;
+	result.y = -1;
+	return result;
+}
 
-	if (macroboard == -1)
+Move make_move(int time, Board *curr_board)
+{
+	if (g_this_bot_id == 0)
 	{
-		/* no legal moves? */
-#ifdef DEBUG
-		fprintf(stderr, "bot thinks there are currently no legal moves,\n");
-#endif
-		result.x = 0;
-		result.y = 0;
+		Move result = {.x = 0, .y = 0};
 		return result;
 	}
+	Board *root = get_board();
+	memcpy(root, curr_board, sizeof(Board));
+	Tree *tree = construct_tree(root, g_this_bot_id);
+	minimax(tree);
 
-	Move translation = g_macro_table[macroboard];
-	
-	int j;
-	for (i = 0; i < 3; i++)
+	Move result;
+	long best = LONG_MIN;
+	Item *curr = tree->root->children;
+	while (curr != NULL)
 	{
-		for (j = 0; j < 3; j++)
+		if (curr->node->score > best)
 		{
-			int square = curr_board->spaces[i + translation.x + (j + translation.y)*BOARD_PITCH];
-			if (square == 0)
-			{
-				result.x = translation.x + i;
-				result.y = translation.y + j;
-			}
+			best = curr->node->score;
+			result = reverse_move(tree->root->position, curr->node->position);
 		}
+		curr = curr->next;
 	}
+
+	free_tree(tree);
+
 	return result;
 }
 
