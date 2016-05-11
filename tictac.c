@@ -662,7 +662,9 @@ Tree *construct_tree(Board *current_state, char to_move, int ply, int millis)
 	Item *stack = NULL;
 	while (curr != NULL && (clock() - g_starting_time) / (CLOCKS_PER_SEC / 1000) < millis)
 	{
-		if (curr->depth < ply)
+		if (curr->depth < ply &&
+		    curr->score != LONG_MAX &&
+		    curr->score != LONG_MIN)
 		{
 			fill_children(curr);
 			Item *curr_node = curr->children;
@@ -926,7 +928,7 @@ Move make_move(int milliseconds, Board *curr_board)
 	free_tree(tree);
 
 	int time_elapsed = (clock() - g_starting_time) / (CLOCKS_PER_SEC / 1000);
-	fprintf(stderr, "Time Elapsed: %d\n", time_elapsed);
+	fprintf(stderr, "Time Elapsed: %d. Depth Chosen: %d\n", time_elapsed, ply);
 	return result;
 }
 
