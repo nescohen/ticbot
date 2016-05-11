@@ -82,6 +82,7 @@ struct board
 {
 	int moves;
 	int rounds;
+	Move last_move;
 	char boards[BOARD_MACROS];
 	char spaces[BOARD_SPACES];
 };
@@ -539,8 +540,8 @@ void fill_children(Node *node)
 		curr_node->depth = node->depth + 1;
 		curr_node->position = get_board();
 		curr_node->to_move = abs(node->to_move - 3);
-		*(curr_node->position) = *(node->position);
 		memcpy(curr_node->position, node->position, sizeof(Board));
+		curr_node->position->last_move = curr->move;
 		move_and_update(curr_node->position, &curr->move, node->to_move);
 		curr_node->score = score_board(curr_node->position);
 
@@ -738,6 +739,7 @@ int update_game(const char *aspect, const char *value)
 }
 
 Move reverse_move(Board *original, Board *changed)
+/* DEPRECIATED */
 {
 	int i;
 	for (i = 0; i < BOARD_SPACES; i++)
@@ -776,10 +778,10 @@ Move make_move(int milliseconds, Board *curr_board)
 	Item *curr = tree->root->children;
 	while (curr != NULL)
 	{
-		if (curr->node->score > best)
+		if (curr->node->score >= best)
 		{
 			best = curr->node->score;
-			result = reverse_move(tree->root->position, curr->node->position);
+			result = curr->node->position->last_move;
 		}
 		curr = curr->next;
 	}
