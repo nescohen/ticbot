@@ -284,7 +284,7 @@ long score_board(Board *board)
 	long score = 0;
 	for (i = 0; i < BOARD_MACROS; i++)
 	{
-		int offset = g_macro_table[i].x + g_macro_table[i].y*BOARD_PITCH;
+		int offset = g_macro_table[i].x + g_macro_table[i].y*BOARD_PITCH + 10;
 		if (board->boards[i] == g_this_bot_id)
 		{
 			score += 1000;
