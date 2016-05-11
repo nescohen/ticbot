@@ -15,8 +15,6 @@
 
 #define WINNING_BOARDS 8
 
-#define PLY 4
-
 #define STR_SETTINGS "settings"
 #define STR_UPDATE "update"
 #define STR_REQUEST "action"
@@ -246,6 +244,83 @@ Item *get_item()
 	return item;
 }
 
+long value_microboard(const char *board, int pitch)
+{
+	long score = 0;
+	int i, j;
+	for (i = 0; i < 3; i++)
+	{
+		int horizontal_count = 0;
+		int vertical_count = 0;
+		for(j = 0; j < 3; j++)
+		{
+			if (*(board + i + j*pitch) == g_this_bot_id)
+			{
+				horizontal_count += 1;
+			}
+			else if (*(board + i + j*pitch) == g_opps_bot_id)
+			{
+				horizontal_count -= 1;
+			}
+			if (*(board + j + i*pitch) == g_this_bot_id)
+			{
+				vertical_count += 1;
+			}
+			else if (*(board + j + i*pitch) == g_opps_bot_id)
+			{
+				vertical_count -= 1;
+			}
+		}
+		if (horizontal_count >= 2)
+		{
+			score += 150;
+		}
+		else if (horizontal_count <= -2)
+		{
+			score -= 150;
+		}
+		if (vertical_count >= 2)
+		{
+			score += 150;
+		}
+		else if (vertical_count <= -2)
+		{
+			score -= 150;
+		}
+	}
+
+	int fore_count = 0;
+	int back_count = 0;
+	for (i = 0; i < 3; i++)
+	{
+		if (*(board + i + i*pitch) == g_this_bot_id)
+		{
+			fore_count += 1;
+		}
+		if (*(board + i + (2 - i)*pitch) == g_this_bot_id)
+		{
+			fore_count += 1;
+		}
+	}
+	if (fore_count >= 2)
+	{
+		score += 150;
+	}
+	else if (fore_count <= -2)
+	{
+		score -= 150;
+	}
+	if (back_count >= 2)
+	{
+		score += 150;
+	}
+	else if (back_count <= -2)
+	{
+		score -= 150;
+	}
+	return score;
+}
+
 long score_board(Board *board)
 {
 	/* determine if a board is in an endgame position */
@@ -288,9 +363,17 @@ long score_board(Board *board)
 	}
 
 	long score = 0;
+	if (board->spaces[40] == g_this_bot_id) /* test for the very middle square */
+	{
+		score += 100;
+	}
+	else if (board->spaces[40] == g_opps_bot_id)
+	{
+		score -= 100;
+	}
 	for (i = 0; i < BOARD_MACROS; i++)
 	{
-		int offset = g_macro_table[i].x + g_macro_table[i].y*BOARD_PITCH + 10;
+		int offset = g_macro_table[i].x + g_macro_table[i].y*BOARD_PITCH;
 		if (board->boards[i] == g_this_bot_id)
 		{
 			score += 1000;
@@ -299,11 +382,20 @@ long score_board(Board *board)
 		{
 			score -= 1000;
 		}
-		else if (board->spaces[offset] == g_this_bot_id)
+		else if (board->spaces[offset + 10] == g_this_bot_id)
 		{
-			score += 100;
+			score += 50;
+		}
+		else if (board->spaces[offset + 10] == g_opps_bot_id)
+		{
+			score -= 50;
+		}
+		if (board->boards[i] <= 0)
+		{
+			score += value_microboard(board->spaces + offset, BOARD_PITCH);
 		}
 	}
+
 	return score;
 }
 
@@ -553,7 +645,7 @@ void fill_children(Node *node)
 	node->children = board_list;
 }
 
-Tree *construct_tree(Board *current_state, char to_move)
+Tree *construct_tree(Board *current_state, char to_move, int ply)
 {
 	Tree *tree = get_tree();
 
@@ -568,7 +660,7 @@ Tree *construct_tree(Board *current_state, char to_move)
 	Item *stack = NULL;
 	while (curr != NULL)
 	{
-		if (curr->depth < PLY)
+		if (curr->depth < ply)
 		{
 			fill_children(curr);
 			Item *curr_node = curr->children;
@@ -768,9 +860,14 @@ Move make_move(int milliseconds, Board *curr_board)
 		fprintf(stderr, "Something went very wrong...\n");
 		return result;
 	}
+
+	int ply;
+	if (milliseconds >= 9500) ply = 6;
+	else ply = 4;
+
 	Board *root = get_board();
 	memcpy(root, curr_board, sizeof(Board));
-	Tree *tree = construct_tree(root, g_this_bot_id);
+	Tree *tree = construct_tree(root, g_this_bot_id, ply);
 	minimax(tree);
 
 	Move result;
