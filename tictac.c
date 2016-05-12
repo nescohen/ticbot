@@ -10,7 +10,7 @@
 
 // #define DEBUG
 
-// #define DEBUG_MINIMAX
+#define DEBUG_MINIMAX
 
 #define BOARD_SPACES 81
 #define BOARD_MACROS 9
@@ -867,37 +867,35 @@ Move reverse_move(Board *original, Board *changed)
 	return result;
 }
 
-int recommend_depth(Board *board)
+int recommend_depth(Board *board, int milliseconds)
 {
 	int i;
 	int open = 0;
-	int closed = 0;
 	for (i = 0; i < BOARD_MACROS; i++)
 	{
 		if (board->boards[i] == -1)
 		{
 			open += 1;
 		}
-		else if (board->boards[i] != 0)
-		{
-			closed += 1;
-		}
 	}
 
 	int result;
 	if (open == 1)
 	{
-		result = 4;
-		result += (closed / 2);
-		if (result > 7) result = 7;
+		if (milliseconds > 2000) result = 7;
+		else result = 6;
 	}
-	else if (closed > 2)
+	else if (open == 2)
 	{
-		result = 4 + closed/2 - open/2;
+		result = 8;
+	}
+	else if (open <= 5 && milliseconds > 6000)
+	{
+		result = 7;
 	}
 	else
 	{
-		result = 5;
+		result = 6;
 	}
 	return result;
 }
@@ -913,23 +911,19 @@ Move make_move(int milliseconds, Board *curr_board, Tree **tree)
 		return result;
 	}
 
-	int ply;
-	if (milliseconds >= 9000) ply = 6;
-	else if (milliseconds >= 5000) ply = recommend_depth(curr_board);
-	else if (milliseconds <= 1000) ply = 4;
-	else ply = 5;
+	int ply = recommend_depth(curr_board, milliseconds);
 
 	Board *root = get_board();
 	memcpy(root, curr_board, sizeof(Board));
-	*tree = construct_tree(root, g_this_bot_id, ply, milliseconds - 100);
+	*tree = construct_tree(root, g_this_bot_id, ply, milliseconds - 300);
 
 #ifdef DEBUG_MINIMAX
 	g_minimax_time = clock();
 #endif
 	minimax(*tree);
 #ifdef DEBUG_MINIMAX
-	clock_t elapsed = clock() - g_minimax_time;
-	fprintf(stderr, "Minimax cycles elapsed: %d\n", elapsed);
+	clock_t elapsed = (clock() - g_minimax_time) / (CLOCKS_PER_SEC / 1000);
+	fprintf(stderr, "Minimax milliseconds elapsed: %d\n", elapsed);
 #endif
 
 	Move result;
@@ -996,7 +990,9 @@ int get_input()
 #endif
 			fprintf(stdout, "%s %d %d\n", STR_PLACE_MOVE, made.x, made.y);
 			fflush(stdout);
+			clock_t mem_time = clock();
 			free_tree(tree);
+			fprintf(stderr, "Free took %d milliseconds\n", (clock() - mem_time) / (CLOCKS_PER_SEC / 1000));
 			return 0;
 		}
 		else return 1;
