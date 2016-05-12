@@ -1,5 +1,6 @@
 /* Nes Cohen 5/9/16
-   Ultimate Tic Tac Toe Bot v1 */
+   Ultimate Tic Tac Toe Bot v3
+   EXTREMELY PRELIMINARY */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,7 +10,7 @@
 #include <time.h>
 
 // #define DEBUG
-
+#define ALPHA_BETA
 #define DEBUG_MINIMAX
 
 #define BOARD_SPACES 81
@@ -158,7 +159,7 @@ void debug_print_node(Node *node)
 {
 	if (node == NULL) return;
 	Item *curr = node->children;
-	fprintf(stderr, "Node, score=%d, depth=%d\n", node->score, node->depth);
+	fprintf(stderr, "Node, score=%ld, depth=%d\n", node->score, node->depth);
 	debug_print_board(node->position);
 	while (curr != NULL)
 	{
@@ -178,6 +179,17 @@ void debug_print_list(Movelist *list)
 	while (curr != NULL)
 	{
 		fprintf(stderr, "Move (%d, %d)\n", curr->move.x, curr->move.y);
+		curr = curr->next;
+	}
+}
+
+void debug_print_nodelist(Item *list)
+{
+	Item *curr = list;
+	while (curr != NULL)
+	{
+		if (curr->node != NULL) debug_print_node(curr->node);
+		else fprintf(stderr, "NULL\n");
 		curr = curr->next;
 	}
 }
@@ -232,7 +244,7 @@ void free_node(Node *node)
 	while (curr != NULL)
 	{
 		Item *temp = curr;
-		free_node(curr->node);
+		if (curr->node != NULL) free_node(curr->node);
 		curr = curr->next;
 		free(temp);
 	}
@@ -513,7 +525,7 @@ long minimax_node(Node *node, int max_player)
 	}
 }
 
-Move minimax(Tree *tree)
+void minimax(Tree *tree)
 {
 	Item *curr = tree->root->children;
 
@@ -707,6 +719,74 @@ Tree *construct_tree(Board *current_state, char to_move, int ply, int millis)
 	return tree;
 }
 
+long prune_node(Node *node, int depth, long alpha, long beta, int max_player)
+{
+	Item *curr;
+
+	if (node->depth >= depth || node->score == LONG_MAX || node->score == LONG_MIN)
+	{
+		return node->score;
+	}
+
+	fill_children(node);
+	curr = node->children;
+	if (max_player)
+	{
+		long value = LONG_MIN;
+		while(curr != NULL)
+		{
+			long child = prune_node(curr->node, depth, alpha, beta, 0);
+			if (curr->node->depth > 1)
+			{
+				free_node(curr->node);
+				curr->node = NULL;
+			}
+			if (child > value) value = child;
+			if (value > alpha) alpha = value;
+			if (beta <= alpha) return beta;
+			curr = curr->next;
+		}
+		node->score = value;
+		return value;
+	}
+	else /* min player */
+	{
+		long value = LONG_MAX;
+		while(curr != NULL)
+		{
+			long child = prune_node(curr->node, depth, alpha, beta, 1);
+			if (curr->node->depth > 1)
+			{
+				free_node(curr->node);
+				curr->node = NULL;
+			}
+			if (child < value) value = child;
+			if (value < beta) beta = value;
+			if (beta <= alpha) return beta;
+			curr = curr->next;
+		}
+		node->score = value;
+		return value;
+	}
+}
+
+Tree *construct_tree_ab(Board *current_state, char to_move, int ply, int millis)
+{
+	Tree *tree = get_tree();
+
+	tree->root = get_node();
+	tree->root->position = current_state;
+	tree->root->to_move = to_move;
+	tree->root->parent = NULL;
+	tree->root->children = NULL;
+	tree->root->depth = 0;
+	tree->root->score = 0;
+
+	tree->root->score = prune_node(tree->root, ply, LONG_MIN, LONG_MAX, 1);
+
+	return tree;
+}
+
 void translate_board(const char *string, Board *board)
 {
 	char *copy = (char *)malloc(strlen(string) + 1);
@@ -847,28 +927,9 @@ int update_game(const char *aspect, const char *value)
 	}
 }
 
-Move reverse_move(Board *original, Board *changed)
-/* DEPRECIATED */
-{
-	int i;
-	for (i = 0; i < BOARD_SPACES; i++)
-	{
-		if (original->spaces[i] != changed->spaces[i])
-		{
-			Move result;
-			result.x = i % BOARD_PITCH;
-			result.y = i / BOARD_PITCH;
-			return result;
-		}
-	}
-	Move result;
-	result.x = -1;
-	result.y = -1;
-	return result;
-}
-
 int recommend_depth(Board *board, int milliseconds)
 {
+	return 8; //temporary!
 	int i;
 	int open = 0;
 	for (i = 0; i < BOARD_MACROS; i++)
@@ -915,23 +976,32 @@ Move make_move(int milliseconds, Board *curr_board, Tree **tree)
 
 	Board *root = get_board();
 	memcpy(root, curr_board, sizeof(Board));
-	*tree = construct_tree(root, g_this_bot_id, ply, milliseconds - 300);
+#ifdef ALPHA_BETA
+	*tree = construct_tree_ab(root, g_this_bot_id, ply, milliseconds - 300);
+#endif
 
+#ifndef ALPHA_BETA
+	*tree = construct_tree(root, g_this_bot_id, ply, milliseconds -300);
 #ifdef DEBUG_MINIMAX
 	g_minimax_time = clock();
 #endif
 	minimax(*tree);
 #ifdef DEBUG_MINIMAX
 	clock_t elapsed = (clock() - g_minimax_time) / (CLOCKS_PER_SEC / 1000);
-	fprintf(stderr, "Minimax milliseconds elapsed: %d\n", elapsed);
+	fprintf(stderr, "Minimax milliseconds elapsed: %ld\n", elapsed);
+#endif
 #endif
 
-	Move result;
+	Move result = {.x = -1, .y = -1};
 	long best = LONG_MIN;
 	Item *curr = (*tree)->root->children;
 	while (curr != NULL)
 	{
-		if (curr->node->score >= best)
+		if (curr->node != NULL)
+		{
+			fprintf(stderr, "Possible move (%d, %d) %ld.\n", curr->node->position->last_move.x, curr->node->position->last_move.y, curr->node->score);
+		}
+		if (curr->node != NULL && curr->node->score >= best)
 		{
 			best = curr->node->score;
 			result = curr->node->position->last_move;
@@ -991,8 +1061,10 @@ int get_input()
 			fprintf(stdout, "%s %d %d\n", STR_PLACE_MOVE, made.x, made.y);
 			fflush(stdout);
 			clock_t mem_time = clock();
+#ifndef ALPHA_BETA
 			free_tree(tree);
-			fprintf(stderr, "Free took %d milliseconds\n", (clock() - mem_time) / (CLOCKS_PER_SEC / 1000));
+#endif
+			fprintf(stderr, "Free took %ld milliseconds\n", (clock() - mem_time) / (CLOCKS_PER_SEC / 1000));
 			return 0;
 		}
 		else return 1;
