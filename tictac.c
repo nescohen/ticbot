@@ -11,7 +11,7 @@
 
 // #define DEBUG
 #define ALPHA_BETA
-#define DEBUG_MINIMAX
+// #define DEBUG_MINIMAX
 
 #define BOARD_SPACES 81
 #define BOARD_MACROS 9
@@ -743,7 +743,7 @@ long prune_node(Node *node, int depth, long alpha, long beta, int max_player)
 			}
 			if (child > value) value = child;
 			if (value > alpha) alpha = value;
-			if (beta <= alpha) return beta;
+			if (beta <= alpha) break;
 			curr = curr->next;
 		}
 		node->score = value;
@@ -762,7 +762,7 @@ long prune_node(Node *node, int depth, long alpha, long beta, int max_player)
 			}
 			if (child < value) value = child;
 			if (value < beta) beta = value;
-			if (beta <= alpha) return beta;
+			if (beta <= alpha) break;
 			curr = curr->next;
 		}
 		node->score = value;
@@ -929,7 +929,6 @@ int update_game(const char *aspect, const char *value)
 
 int recommend_depth(Board *board, int milliseconds)
 {
-	return 8; //temporary!
 	int i;
 	int open = 0;
 	for (i = 0; i < BOARD_MACROS; i++)
@@ -943,32 +942,38 @@ int recommend_depth(Board *board, int milliseconds)
 	int result;
 	if (open == 1)
 	{
-		if (milliseconds > 2000) result = 7;
-		else result = 6;
+		if (milliseconds > 6000) result = 8;
+		else result = 7;
 	}
 	else if (open == 2)
 	{
-		result = 8;
+		result = 9;
 	}
 	else if (open <= 5 && milliseconds > 6000)
 	{
-		result = 7;
+		result = 8;
 	}
 	else
 	{
-		result = 6;
+		result = 7;
 	}
 	return result;
 }
 
 Move make_move(int milliseconds, Board *curr_board, Tree **tree)
 {
-	fprintf(stderr, "Time Bank: %d milliseconds\n", milliseconds);
+//	fprintf(stderr, "Time Bank: %d milliseconds\n", milliseconds);
 
 	if (g_this_bot_id == 0)
 	{
 		Move result = {.x = 0, .y = 0};
 		fprintf(stderr, "Something went very wrong...\n");
+		return result;
+	}
+
+	if (g_current_board.moves == 1)
+	{
+		Move result = {.x = 4, .y = 4};
 		return result;
 	}
 
@@ -999,7 +1004,7 @@ Move make_move(int milliseconds, Board *curr_board, Tree **tree)
 	{
 		if (curr->node != NULL)
 		{
-			fprintf(stderr, "Possible move (%d, %d) %ld.\n", curr->node->position->last_move.x, curr->node->position->last_move.y, curr->node->score);
+//			fprintf(stderr, "Possible move (%d, %d) %ld.\n", curr->node->position->last_move.x, curr->node->position->last_move.y, curr->node->score);
 		}
 		if (curr->node != NULL && curr->node->score >= best)
 		{
@@ -1060,11 +1065,11 @@ int get_input()
 #endif
 			fprintf(stdout, "%s %d %d\n", STR_PLACE_MOVE, made.x, made.y);
 			fflush(stdout);
-			clock_t mem_time = clock();
+//			clock_t mem_time = clock();
 #ifndef ALPHA_BETA
 			free_tree(tree);
 #endif
-			fprintf(stderr, "Free took %ld milliseconds\n", (clock() - mem_time) / (CLOCKS_PER_SEC / 1000));
+//			fprintf(stderr, "Free took %ld milliseconds\n", (clock() - mem_time) / (CLOCKS_PER_SEC / 1000));
 			return 0;
 		}
 		else return 1;
