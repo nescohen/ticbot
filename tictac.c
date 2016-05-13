@@ -9,7 +9,7 @@
 #include <limits.h>
 #include <time.h>
 
-// #define DEBUG
+#define DEBUG
 #define ALPHA_BETA
 // #define DEBUG_MINIMAX
 
@@ -962,12 +962,16 @@ int recommend_depth(Board *board, int milliseconds)
 
 Move make_move(int milliseconds, Board *curr_board, Tree **tree)
 {
-//	fprintf(stderr, "Time Bank: %d milliseconds\n", milliseconds);
+#ifdef DEBUG
+	fprintf(stderr, "Time Bank: %d milliseconds\n", milliseconds);
+#endif
 
 	if (g_this_bot_id == 0)
 	{
 		Move result = {.x = 0, .y = 0};
+#ifdef DEBUG
 		fprintf(stderr, "Something went very wrong...\n");
+#endif
 		return result;
 	}
 
@@ -1002,11 +1006,7 @@ Move make_move(int milliseconds, Board *curr_board, Tree **tree)
 	Item *curr = (*tree)->root->children;
 	while (curr != NULL)
 	{
-		if (curr->node != NULL)
-		{
-//			fprintf(stderr, "Possible move (%d, %d) %ld.\n", curr->node->position->last_move.x, curr->node->position->last_move.y, curr->node->score);
-		}
-		if (curr->node != NULL && curr->node->score >= best)
+		if (curr->node != NULL && curr->node->score > best)
 		{
 			best = curr->node->score;
 			result = curr->node->position->last_move;
@@ -1014,10 +1014,13 @@ Move make_move(int milliseconds, Board *curr_board, Tree **tree)
 		curr = curr->next;
 	}
 
-	fprintf(stderr, "Best Move Score: %ld - (%d, %d)\n", best, result.x, result.y);
+	if (best == LONG_MIN) result = (*tree)->root->children->node->position->last_move;
 
+#ifdef DEBUG
+	fprintf(stderr, "Best Move Score: %ld - (%d, %d)\n", best, result.x, result.y);
 	int time_elapsed = (clock() - g_starting_time) / (CLOCKS_PER_SEC / 1000);
 	fprintf(stderr, "Time Elapsed: %d. Depth Chosen: %d\n", time_elapsed, ply);
+#endif
 	return result;
 }
 
@@ -1056,18 +1059,15 @@ int get_input()
 	{
 		if (strcmp(op_2, STR_MOVE) == 0)
 		{
-			Tree *tree;
+			Tree *tree = NULL;
 			g_time_bank = strtol(op_3, NULL, 10);
 			g_starting_time = clock();
 			Move made = make_move(strtol(op_3, NULL, 10), &g_current_board, &tree);
-#ifdef DEBUG
-			fprintf(stderr, "about to print move. Input count=%d\n", g_input_count);
-#endif
 			fprintf(stdout, "%s %d %d\n", STR_PLACE_MOVE, made.x, made.y);
 			fflush(stdout);
 //			clock_t mem_time = clock();
 #ifndef ALPHA_BETA
-			free_tree(tree);
+			if (tree != NULL) free_tree(tree);
 #endif
 //			fprintf(stderr, "Free took %ld milliseconds\n", (clock() - mem_time) / (CLOCKS_PER_SEC / 1000));
 			return 0;
@@ -1079,23 +1079,10 @@ int get_input()
 
 int main(int argc, char const *argv[])
 {
-
-#ifndef DEBUG
 	int error = 0;
 	while(!error)
 	{
 		error = get_input();
 	}
 	return error;
-#endif
-
-#ifdef DEBUG
-	g_this_bot_id = 1;
-	g_opps_bot_id = 2;
-	memset(g_current_board.boards, -1, BOARD_MACROS);
-	memset(g_current_board.spaces, 0, BOARD_SPACES);
-	Tree *test = construct_tree(&g_current_board, 1);
-	debug_print_tree(test);
-	return 0;
-#endif
 }
