@@ -1,6 +1,6 @@
 /* Nes Cohen 5/9/16
-   Ultimate Tic Tac Toe Bot v3
-   EXTREMELY PRELIMINARY */
+   Ultimate Tic Tac Toe Bot v4, organized bitches
+   less EXTREMELY PRELIMINARY */
 
 #include <stdio.h>
 #include <stdlib.h>
