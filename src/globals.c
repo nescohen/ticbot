@@ -1,5 +1,5 @@
-#include "globals.h"
 #include "definitions.h"
+#include "globals.h"
 
 const Move g_macro_table[9] =
 {
@@ -41,7 +41,7 @@ char g_opps_bot_id = 0;
 
 int g_input_count = 0;
 
-Board g_current_board = NULL;
+Board g_current_board;
 
 #ifdef DEBUG_MINIMAX
 clock_t g_minimax_time = 0;

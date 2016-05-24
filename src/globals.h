@@ -3,6 +3,9 @@
 
 #include "definitions.h"
 
+#include <time.h>
+#include <stdint.h>
+
 extern const Move g_macro_table[9];
 
 extern const uint16_t g_winning_boards[8];
@@ -15,12 +18,12 @@ extern int g_time_bank;
 extern clock_t g_move_start_time;
 
 /* string name for current bot */
-extern char *g_this_bot_name = NULL;
+extern char *g_this_bot_name;
 /* integer representation of bot */
-extern char g_this_bot_id = 0;
-extern char g_opps_bot_id = 0;
+extern char g_this_bot_id;
+extern char g_opps_bot_id;
 
-extern int g_input_count = 0;
+extern int g_input_count;
 
 extern Board g_current_board;
 

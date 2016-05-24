@@ -1,2 +1,2 @@
 @echo off
-bot 2>err.txt < test.txt
+bin\bot 2>test\err.txt < test\test.txt
