@@ -486,6 +486,8 @@ int evaluate_board(const char *board, int rows, int columns, int pitch)
 	}
 }
 
+//NOTE: stopped here
+
 long minimax_node(Node *node, int max_player)
 {
 	if (node->children == NULL)
