@@ -79,12 +79,17 @@ static long value_microboard(const char *board, int pitch)
 		score -= 150;
 	}
 
-	/* check the corners */
+	/* check the corners and middle */
 	if (*board == g_this_bot_id) score += 10;
+	else if (*board == g_opps_bot_id) score -= 10;
 	if (*(board + 2) == g_this_bot_id) score += 10;
+	else if (*(board + 2) == g_opps_bot_id) score -= 10;
 	if (*(board + 2*pitch) == g_this_bot_id) score += 10;
+	else if (*(board + 2*pitch) == g_opps_bot_id) score -= 10;
 	if (*(board + 2 + 2*pitch) == g_this_bot_id) score += 10;
-
+	else if (*(board + 2 + 2*pitch) == g_opps_bot_id) score -= 10;
+	if (*(board + 1 + 1*pitch) == g_this_bot_id) score += 10;
+	else if (*(board + 1 + 1*pitch) == g_opps_bot_id) score -= 10;
 	return score;
 }
 
@@ -129,38 +134,50 @@ long score_board(Board *board)
 		return LONG_MIN;
 	}
 
+	long board_scores[9];
 	long score = 0;
 	if (board->spaces[40] == g_this_bot_id) /* test for the very middle square */
 	{
 		score += 100;
 	}
-	if (board->boards[4] == g_this_bot_id) /* test for the very middle board */
-	{
-		score += 1000;
-	}
+//	if (board->boards[4] == g_this_bot_id) /* test for the very middle board */
+//	{
+//		score += 1000;
+//	}
 	for (i = 0; i < BOARD_MACROS; i++)
 	{
 		int offset = g_macro_table[i].x + g_macro_table[i].y*BOARD_PITCH;
 		if (board->boards[i] == g_this_bot_id)
 		{
-			score += 1000;
+			board_scores[i] = 1000;
 		}
 		else if (board->boards[i] == g_opps_bot_id)
 		{
-			score -= 1000;
+			board_scores[i] = -1000;
 		}
-		else if (board->spaces[offset + 10] == g_this_bot_id)
+		else if (board->boards[i] <= 0)
 		{
-			score += 50;
+			// long microboard_score = value_microboard(board->spaces + offset, BOARD_PITCH);
+			// score += microboard_score;
+			// board_scores[i] = microboard_score;
+			board_scores[i] = value_microboard(board->spaces + offset, BOARD_PITCH);
 		}
-		else if (board->spaces[offset + 10] == g_opps_bot_id)
-		{
-			score -= 50;
-		}
-		if (board->boards[i] <= 0)
-		{
-			score += value_microboard(board->spaces + offset, BOARD_PITCH);
-		}
+	}
+
+	long wins[8];
+	long scores[8];
+	memset(wins, 0, 8*sizeof(long));
+	for (i = 0; i < 3; i++)
+	{
+		//WORK IN PROGRESS
+		wins[0] += board_scores[i + 0*3]; //horizontal
+		wins[1] += board_scores[i + 1*3];
+		wins[2] += board_scores[i + 2*3];
+		wins[3] += board_scores[0 + i*3]; //vertical
+		wins[4] += board_scores[1 + i*3];
+		wins[5] += board_scores[2 + i*3];
+		wins[6] += board_scores[i + (2-i)*3]; //diagonal
+		wins[7] += board_scores[(2-i) + i*3];
 	}
 
 	return score;
