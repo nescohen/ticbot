@@ -164,9 +164,10 @@ long score_board(Board *board)
 		}
 	}
 
-	long wins[8];
-	long scores[8];
-	memset(wins, 0, 8*sizeof(long));
+	long me[8];
+	long opps[8];
+	memset(me, 0, 8*sizeof(long));
+	memset(opps, 0, 8*sizeof(long));
 	for (i = 0; i < 3; i++)
 	{
 		//WORK IN PROGRESS
