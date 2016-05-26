@@ -9,6 +9,7 @@
 #include <math.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 static Movelist *legal_moves(Board *state)
 {
@@ -142,12 +143,14 @@ static void fill_children(Node *node)
 }
 
 
-static long prune_node(Node *node, int depth, long alpha, long beta, int max_player)
+static long prune_node(Node *node, int depth, long alpha, long beta, int max_player, int millis)
 {
 	Item *curr;
 
-	if (node->depth >= depth || node->score == LONG_MAX || node->score == LONG_MIN)
+	int time_elapsed = (clock() - g_move_start_time) / (CLOCKS_PER_SEC / 1000);
+	if (node->depth >= depth || node->score == LONG_MAX || node->score == LONG_MIN /* || millis - time_elapsed < 500*/)
 	{
+		if (!(node->depth >= depth || node->score == LONG_MAX || node->score == LONG_MIN)) fprintf(stderr, "%d - %d\n", millis, time_elapsed);
 		return node->score;
 	}
 
@@ -158,7 +161,7 @@ static long prune_node(Node *node, int depth, long alpha, long beta, int max_pla
 		long value = LONG_MIN;
 		while(curr != NULL)
 		{
-			long child = prune_node(curr->node, depth, alpha, beta, 0);
+			long child = prune_node(curr->node, depth, alpha, beta, 0, millis);
 			if (curr->node->depth > 1)
 			{
 				free_node(curr->node);
@@ -177,7 +180,7 @@ static long prune_node(Node *node, int depth, long alpha, long beta, int max_pla
 		long value = LONG_MAX;
 		while(curr != NULL)
 		{
-			long child = prune_node(curr->node, depth, alpha, beta, 1);
+			long child = prune_node(curr->node, depth, alpha, beta, 1, millis);
 			if (curr->node->depth > 1)
 			{
 				free_node(curr->node);
@@ -205,7 +208,7 @@ Tree *construct_tree_ab(Board *current_state, char to_move, int ply, int millis)
 	tree->root->depth = 0;
 	tree->root->score = 0;
 
-	tree->root->score = prune_node(tree->root, ply, LONG_MIN, LONG_MAX, 1);
+	tree->root->score = prune_node(tree->root, ply, LONG_MIN, LONG_MAX, 1, millis);
 
 	return tree;
 }

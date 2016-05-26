@@ -62,12 +62,17 @@ static int recommend_depth(Board *board, int milliseconds)
 	int result;
 	if (open == 1)
 	{
-		if (milliseconds > 6000) result = 8;
+		if (milliseconds > 8000) result = 9;
+		else if (milliseconds > 6000) result = 8;
 		else result = 7;
 	}
-	else if (open == 2)
+	else if (open == 3 && milliseconds > 7000)
 	{
 		result = 9;
+	}
+	else if (open == 2 && milliseconds > 7000)
+	{
+		result = 10;
 	}
 	else if (open <= 5 && milliseconds > 6000)
 	{
