@@ -6,6 +6,31 @@
 #include <string.h>
 #include <stdio.h>
 
+typedef struct row
+{
+	long total;
+	char victories;
+	char losses;
+	char draws;
+} Row;
+
+static int is_draw(const char *board, int pitch)
+{
+	int i, j;
+	for (i = 0; i < 3; i++)
+	{
+		for (j = 0; j < 3; j++)
+		{
+			if ( *(board + i + j*pitch) <= 0 )
+			{
+				return 0;
+			}
+		}
+	}
+
+	return 1;
+}
+
 static long value_microboard(const char *board, int pitch)
 {
 	long score = 0;
@@ -162,50 +187,72 @@ long score_board(Board *board)
 			// long microboard_score = value_microboard(board->spaces + offset, BOARD_PITCH);
 			// score += microboard_score;
 			// board_scores[i] = microboard_score;
+			if (is_draw(board->spaces + offset, BOARD_PITCH))
+			{
+				board_scores[i] = LONG_MAX;
+			}
 			board_scores[i] = value_microboard(board->spaces + offset, BOARD_PITCH);
 		}
 	}
 
-	long me[8];
-	long opps[8];
-	memset(me, 0, 8*sizeof(long));
-	memset(opps, 0, 8*sizeof(long));
+	Row rows[8];
+	memset(rows, 0, 8*sizeof(Row));
 	for (i = 0; i < 3; i++)
 	{
-		if (board_scores[i + 0*3] < 0) opps[0] -= board_scores[(i + 0*3)]; //horizontal
-		else me[0] += board_scores[(i + 0*3)]; //horizontal
-		if (board_scores[i + 1*3] < 0) opps[1] -= board_scores[(i + 1*3)];
-		else me[1] += board_scores[(i + 1*3)];
-		if (board_scores[i + 2*3] < 0) opps[2] -= board_scores[(i + 2*3)];
-		else me[2] += board_scores[(i + 2*3)];
-		if (board_scores[0 + i*3] < 0) opps[3] -= board_scores[(0 + i*3)]; //vertical
-		else me[3] += board_scores[(0 + i*3)]; //vertical
-		if (board_scores[1 + i*3] < 0) opps[4] -= board_scores[(1 + i*3)];
-		else me[4] += board_scores[(1 + i*3)];
-		if (board_scores[2 + i*3] < 0) opps[5] -= board_scores[(2 + i*3)];
-		else me[5] += board_scores[(2 + i*3)];
-		if (board_scores[i + (2-i)*3] < 0) opps[6] -= board_scores[(i + (2-i)*3)]; //diagonal
-		else me[6] += board_scores[(i + (2-i)*3)]; //diagonal
-		if (board_scores[(2-i) + i*3] < 0) opps[7] -= board_scores[((2-i) + i*3)];
-		else me[7] += board_scores[((2-i) + i*3)];
+		if (board_scores[i + 0*3] == LONG_MAX) rows[0].draws += 1;
+		else if (board_scores[i + 0*3] <= -1000) rows[0].losses += 1;
+		else if (board_scores[i + 0*3] >= 1000) rows[0].victories += 1;
+		else rows[0].total += board_scores[i + 0*3];
+
+		if (board_scores[i + 1*3] == LONG_MAX) rows[1].draws += 1;
+		else if (board_scores[i + 1*3] <= -1000) rows[1].losses += 1;
+		else if (board_scores[i + 1*3] >= 1000) rows[1].victories += 1;
+		else rows[1].total += board_scores[i + 1*3];
+
+		if (board_scores[i + 2*3] == LONG_MAX) rows[2].draws += 1;
+		else if (board_scores[i + 2*3] <= -1000) rows[2].losses += 1;
+		else if (board_scores[i + 2*3] >= 1000) rows[2].victories += 1;
+		else rows[2].total += board_scores[i + 2*3];
+
+		if (board_scores[0 + i*3] == LONG_MAX) rows[3].draws += 1;
+		else if (board_scores[0 + i*3] <= -1000) rows[3].losses += 1;
+		else if (board_scores[0 + i*3] >= 1000) rows[3].victories += 1;
+		else rows[3].total += board_scores[0 + i*3];
+
+		if (board_scores[1 + i*3] == LONG_MAX) rows[4].draws += 1;
+		else if (board_scores[1 + i*3] <= -1000) rows[4].losses += 1;
+		else if (board_scores[1 + i*3] >= 1000) rows[4].victories += 1;
+		else rows[4].total += board_scores[1 + i*3];
+
+		if (board_scores[2 + i*3] == LONG_MAX) rows[5].draws += 1;
+		else if (board_scores[2 + i*3] <= -1000) rows[5].losses += 1;
+		else if (board_scores[2 + i*3] >= 1000) rows[5].victories += 1;
+		else rows[5].total += board_scores[2 + i*3];
+
+		if (board_scores[i + (2-i)*3] == LONG_MAX) rows[6].draws += 1;
+		else if (board_scores[i + (2-i)*3] <= -1000) rows[6].losses += 1;
+		else if (board_scores[i + (2-i)*3] >= 1000) rows[6].victories += 1;
+		else rows[6].total += board_scores[i + (2-i)*3];
+
+		if (board_scores[(2-i) + i*3] == LONG_MAX) rows[7].draws += 1;
+		else if (board_scores[(2-i) + i*3] <= -1000) rows[7].losses += 1;
+		else if (board_scores[(2-i) + i*3] >= 1000) rows[7].victories += 1;
+		else rows[7].total += board_scores[(2-i) + i*3];
 	}
 
 	for (i = 0; i < 8; i++)
 	{
-		if ( !(me[i] >= 1000 && opps[i] >= 1000) )
+		if (rows[i].draws == 0 && !(rows[i].victories && rows[i].losses))
 		{
-			if (me[i] >= 1000)
+			if (rows[i].victories > 0)
 			{
-				score += me[i]/2 - opps[i];
+				score += rows[i].victories*1000;
 			}
-			else if (opps[i] >= 1000)
+			else if (rows[i].losses > 0)
 			{
-				score -= opps[i]/2 - me[i];
+				score -= rows[i].losses*1000;
 			}
-			else
-			{
-				score += (me[i] + opps[i])*2;
-			}
+			score += rows[i].total;
 		}
 	}
 
