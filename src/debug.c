@@ -1,5 +1,6 @@
 #include "debug.h"
 #include "definitions.h"
+#include <stdio.h>
 
 #ifdef DEBUG
 

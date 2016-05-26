@@ -261,10 +261,6 @@ int get_input()
 
 	fgets(buffer, 500, stdin);
 
-#ifdef DEBUG
-	fprintf(stderr, "%s\n", buffer);
-#endif
-
 	sscanf(buffer, "%50s%50s%50s%200s", op_1, op_2, op_3, op_4);
 
 	if (strcmp(op_1, STR_SETTINGS) == 0)

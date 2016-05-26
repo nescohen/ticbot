@@ -8,6 +8,7 @@
 #include <string.h>
 #include <math.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 static Movelist *legal_moves(Board *state)
 {
@@ -47,11 +48,6 @@ static Movelist *legal_moves(Board *state)
 			}
 		}
 	}
-
-#ifdef DEBUG
-//	if (result == NULL) fprintf(stderr, "Bot believes there are no legal moves\n");
-#endif
-
 	return result;
 }
 

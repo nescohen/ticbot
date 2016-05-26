@@ -3,6 +3,8 @@
 #include "globals.h"
 #include <stdint.h>
 #include <limits.h>
+#include <string.h>
+#include <stdio.h>
 
 static long value_microboard(const char *board, int pitch)
 {
@@ -170,15 +172,41 @@ long score_board(Board *board)
 	memset(opps, 0, 8*sizeof(long));
 	for (i = 0; i < 3; i++)
 	{
-		//WORK IN PROGRESS
-		wins[0] += board_scores[i + 0*3]; //horizontal
-		wins[1] += board_scores[i + 1*3];
-		wins[2] += board_scores[i + 2*3];
-		wins[3] += board_scores[0 + i*3]; //vertical
-		wins[4] += board_scores[1 + i*3];
-		wins[5] += board_scores[2 + i*3];
-		wins[6] += board_scores[i + (2-i)*3]; //diagonal
-		wins[7] += board_scores[(2-i) + i*3];
+		if (board_scores[i + 0*3] < 0) opps[0] -= board_scores[(i + 0*3)]; //horizontal
+		else me[0] += board_scores[(i + 0*3)]; //horizontal
+		if (board_scores[i + 1*3] < 0) opps[1] -= board_scores[(i + 1*3)];
+		else me[1] += board_scores[(i + 1*3)];
+		if (board_scores[i + 2*3] < 0) opps[2] -= board_scores[(i + 2*3)];
+		else me[2] += board_scores[(i + 2*3)];
+		if (board_scores[0 + i*3] < 0) opps[3] -= board_scores[(0 + i*3)]; //vertical
+		else me[3] += board_scores[(0 + i*3)]; //vertical
+		if (board_scores[1 + i*3] < 0) opps[4] -= board_scores[(1 + i*3)];
+		else me[4] += board_scores[(1 + i*3)];
+		if (board_scores[2 + i*3] < 0) opps[5] -= board_scores[(2 + i*3)];
+		else me[5] += board_scores[(2 + i*3)];
+		if (board_scores[i + (2-i)*3] < 0) opps[6] -= board_scores[(i + (2-i)*3)]; //diagonal
+		else me[6] += board_scores[(i + (2-i)*3)]; //diagonal
+		if (board_scores[(2-i) + i*3] < 0) opps[7] -= board_scores[((2-i) + i*3)];
+		else me[7] += board_scores[((2-i) + i*3)];
+	}
+
+	for (i = 0; i < 8; i++)
+	{
+		if ( !(me[i] >= 1000 && opps[i] >= 1000) )
+		{
+			if (me[i] >= 1000)
+			{
+				score += me[i]/2 - opps[i];
+			}
+			else if (opps[i] >= 1000)
+			{
+				score -= opps[i]/2 - me[i];
+			}
+			else
+			{
+				score += (me[i] + opps[i])*2;
+			}
+		}
 	}
 
 	return score;

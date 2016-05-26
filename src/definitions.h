@@ -1,7 +1,7 @@
 #ifndef DEFINITIONS_H
 #define DEFINITIONS_H
 
-// #define DEBUG
+#define DEBUG
 #define ALPHA_BETA
 // #define DEBUG_MINIMAX
 
